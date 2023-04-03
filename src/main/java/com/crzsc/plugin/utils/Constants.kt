@@ -1,5 +1,7 @@
 package com.crzsc.plugin.utils
 
+import java.io.File.separator
+
 object Constants {
     /**
      * 配置map的key
@@ -43,7 +45,7 @@ object Constants {
     /**
      * 默认目录
      */
-    const val DEFAULT_OUTPUT_DIR = "generated"
+    val DEFAULT_OUTPUT_DIR = "generated" + separator + "assets"
     const val DEFAULT_CLASS_NAME = "Assets"
 
     const val DEFAULT_FILENAME_SPLIT_PATTERN = "[-_]"

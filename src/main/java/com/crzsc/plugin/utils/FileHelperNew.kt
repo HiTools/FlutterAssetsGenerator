@@ -1,6 +1,7 @@
 package com.crzsc.plugin.utils
 
 import com.crzsc.plugin.setting.PluginSetting
+import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessModuleDir
@@ -61,9 +62,17 @@ object FileHelperNew {
                 val pubConfigMap = Yaml().load(fis) as? Map<String, Any>
                 if (pubConfigMap != null) {
                     val assetVFiles = mutableListOf<VirtualFile>()
+                    val assetFileMap = hashMapOf<String, MutableList<VirtualFile>>()
                     (pubConfigMap["flutter"] as? Map<*, *>)?.let { configureMap ->
                         (configureMap["assets"] as? ArrayList<*>)?.let { list ->
                             for (path in list) {
+                                val dartName = getPathName(path as String)
+                                if (!assetFileMap.containsKey(dartName)) {
+                                    val fileList = mutableListOf<VirtualFile>()
+                                    assetFileMap[dartName] = fileList
+                                }
+                                val fileList = assetFileMap[dartName]!!
+
                                 moduleDir.findFileByRelativePath(path as String)?.let {
                                     if (it.isDirectory) {
                                         val index = path.indexOf("/")
@@ -73,13 +82,22 @@ object FileHelperNew {
                                             path.substring(0, index)
                                         }
                                         val assetVFile = moduleDir.findChild(assetsPath)
-                                            ?: moduleDir.createChildDirectory(this, assetsPath)
+                                                ?: moduleDir.createChildDirectory(this, assetsPath)
                                         if (!assetVFiles.contains(assetVFile)) {
                                             assetVFiles.add(assetVFile)
                                         }
+
+                                        if (!fileList.contains(assetVFile)) {
+                                            fileList.add(assetVFile)
+                                        }
+
                                     } else {
                                         if (!assetVFiles.contains(it)) {
                                             assetVFiles.add(it)
+                                        }
+
+                                        if (!fileList.contains(it)) {
+                                            fileList.add(it)
                                         }
                                     }
                                 }
@@ -87,10 +105,11 @@ object FileHelperNew {
                         }
                     }
                     return ModulePubSpecConfig(
-                        module,
-                        pubRoot,
-                        assetVFiles,
-                        pubConfigMap,
+                            module,
+                            pubRoot,
+                            assetVFiles,
+                            pubConfigMap,
+                            assetFileMap
                     )
                 }
             }
@@ -123,7 +142,7 @@ object FileHelperNew {
      */
     fun isNamedWithParent(config: ModulePubSpecConfig): Boolean {
         return readSetting(config, Constants.KEY_NAMED_WITH_PARENT) as Boolean?
-            ?: PluginSetting.instance.namedWithParent
+                ?: PluginSetting.instance.namedWithParent
     }
 
     /**
@@ -140,8 +159,8 @@ object FileHelperNew {
     fun getFilenameSplitPattern(config: ModulePubSpecConfig): String {
         return try {
             val pattern =
-                readSetting(config, Constants.FILENAME_SPLIT_PATTERN) as String?
-                    ?: PluginSetting.instance.filenameSplitPattern ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
+                    readSetting(config, Constants.FILENAME_SPLIT_PATTERN) as String?
+                            ?: PluginSetting.instance.filenameSplitPattern ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
             Pattern.compile(pattern)
             pattern
         } catch (e: Exception) {
@@ -156,8 +175,8 @@ object FileHelperNew {
     fun getPathIgnore(config: ModulePubSpecConfig): List<String> {
         return try {
             val paths =
-                readSetting(config, Constants.PATH_IGNORE) as List<String>?
-                    ?: emptyList()
+                    readSetting(config, Constants.PATH_IGNORE) as List<String>?
+                            ?: emptyList()
             paths
         } catch (e: Exception) {
             e.printStackTrace()
@@ -173,7 +192,7 @@ object FileHelperNew {
         return config.pubRoot.lib?.let { lib ->
             // 没有配置则返回默认path
             val filePath: String = readSetting(config, Constants.KEY_OUTPUT_DIR) as String?
-                ?: PluginSetting.instance.filePath ?: Constants.DEFAULT_OUTPUT_DIR
+                    ?: PluginSetting.instance.filePath ?: Constants.DEFAULT_OUTPUT_DIR
             println("getGeneratedFilePath $filePath")
             if (!filePath.contains(File.separator)) {
                 return@let lib.findOrCreateChildDir(lib, filePath)
@@ -201,15 +220,33 @@ object FileHelperNew {
         return getGeneratedFilePath(config).let {
             val configName = getGeneratedFileName(config)
             return@let it.findOrCreateChildData(
-                it,
-                "$configName.dart"
+                    it,
+                    "$configName.dart"
             )
         }
     }
 
     fun getGeneratedFileName(config: ModulePubSpecConfig): String =
-        readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String ?: PluginSetting.instance.fileName
-        ?: Constants.DEFAULT_CLASS_NAME.lowercase()
+            readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String ?: PluginSetting.instance.fileName
+            ?: Constants.DEFAULT_CLASS_NAME.lowercase()
+
+
+    fun genFile(config: ModulePubSpecConfig, fileName: String): VirtualFile {
+        return getGeneratedFilePath(config).let {
+            val configName = fileName.lowercase()
+            return@let it.findOrCreateChildData(it, "$configName.dart")
+        }
+    }
+
+    private fun getPathName(path: String): String {
+        val pathList = path.split("/")
+
+        return if (pathList.size <= 1 || pathList[1].isBlank()) {
+            "Base"
+        } else {
+            pathList[1]
+        }
+    }
 
 }
 
@@ -217,9 +254,10 @@ object FileHelperNew {
  * 模块Flutter配置信息
  */
 data class ModulePubSpecConfig(
-    val module: Module,
-    val pubRoot: PubRoot,
-    val assetVFiles: List<VirtualFile>,
-    val map: Map<String, Any>,
-    val isFlutterModule: Boolean = FlutterModuleUtils.isFlutterModule(module)
+        val module: Module,
+        val pubRoot: PubRoot,
+        val assetVFiles: List<VirtualFile>,
+        val map: Map<String, Any>,
+        val assetFileMap: Map<String, List<VirtualFile>>,
+        val isFlutterModule: Boolean = FlutterModuleUtils.isFlutterModule(module)
 )

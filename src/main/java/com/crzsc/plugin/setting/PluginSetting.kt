@@ -16,8 +16,8 @@ class PluginSetting : PersistentStateComponent<PluginSetting> {
     var fileName: String? = Constants.DEFAULT_CLASS_NAME.lowercase()
     var filePath: String? = Constants.DEFAULT_OUTPUT_DIR
     var filenameSplitPattern: String? = Constants.DEFAULT_FILENAME_SPLIT_PATTERN
-    var namedWithParent = true
-    var autoDetection = true
+    var namedWithParent = false
+    var autoDetection = false
     override fun getState(): PluginSetting {
         return this
     }
