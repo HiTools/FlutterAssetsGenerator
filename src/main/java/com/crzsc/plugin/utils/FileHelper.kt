@@ -1,7 +1,6 @@
 package com.crzsc.plugin.utils
 
 import com.crzsc.plugin.setting.PluginSetting
-import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessModuleDir

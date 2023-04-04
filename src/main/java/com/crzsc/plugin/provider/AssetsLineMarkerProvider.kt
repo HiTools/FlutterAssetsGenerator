@@ -30,22 +30,24 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         val module = element.module
         if (!FlutterModuleUtils.isFlutterModule(module)) return null
         val elementType = (element as? LeafPsiElement?)?.elementType?.toString()
-        if (elementType == "REGULAR_STRING_PART"
-        ) {
+        if (elementType == "REGULAR_STRING_PART") {
             // 这里会被多次调用 尽量减少调用次数
             var assetName: String? = null
             if (module != null) {
+                // TODO 文件名字获取
                 FileHelperNew.getPubSpecConfig(module)?.let {
                     assetName = FileHelperNew.getGeneratedFileName(it)
                 }
             }
-            val filenameCorrect = element.containingFile.name.equals(
-                assetName, true
-            ) || element.containingFile.name.equals(
-                "assets.dart", true
-            )
-            if (filenameCorrect) {
-//                println("filenameCorrect showMakeByType : $element")
+
+            val isMarkerFile = when (element.containingFile.name.lowercase()) {
+                "images.dart",
+                "assets.dart",
+                assetName?.lowercase() -> true
+                else -> false
+            }
+
+            if (isMarkerFile) {
                 return showMakeByType(element)
             }
         }
@@ -67,7 +69,6 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
             filePath = file.parent.path + "/" + element.text
             vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
         }
-//        println("showMakeByType assetsPath $assetsPath")
         if (vFile != null) {
             return when {
                 assetsPath.isSvgExtension -> showSvgMark(element, anchor, vFile)
@@ -79,19 +80,19 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
 
 
     private fun showSvgMark(
-        element: PsiElement, anchor: PsiElement,
-        vFile: VirtualFile
+            element: PsiElement, anchor: PsiElement,
+            vFile: VirtualFile
     ): LineMarkerInfo<*> {
         val icon: Icon =
-            ImageIcon(
-                SVGLoader.load(
-                    null,
-                    vFile.inputStream,
-                    ScaleContext.createIdentity(),
-                    16.0,
-                    16.0
+                ImageIcon(
+                        SVGLoader.load(
+                                null,
+                                vFile.inputStream,
+                                ScaleContext.createIdentity(),
+                                16.0,
+                                16.0
+                        )
                 )
-            )
         return LineMarkerInfo(anchor, anchor.textRange, icon, {
             //悬停，会多次调用
             return@LineMarkerInfo ""
@@ -101,17 +102,17 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
 
 
     private fun showIconMark(
-        element: PsiElement, anchor: PsiElement,
-        vFile: VirtualFile
+            element: PsiElement, anchor: PsiElement,
+            vFile: VirtualFile
     ): LineMarkerInfo<*> {
         val icon = IconUtil.getIcon(vFile, Iconable.ICON_FLAG_VISIBILITY, element.project)
         //其他文件展示文件格式
         return LineMarkerInfo(
-            anchor, anchor.textRange,
-            icon, {
-                //悬停，会多次调用
-                return@LineMarkerInfo ""
-            }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT
+                anchor, anchor.textRange,
+                icon, {
+            //悬停，会多次调用
+            return@LineMarkerInfo ""
+        }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT
         )
 
     }

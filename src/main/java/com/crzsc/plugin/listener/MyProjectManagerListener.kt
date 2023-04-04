@@ -6,9 +6,6 @@ import com.intellij.psi.PsiManager
 
 class MyProjectManagerListener : ProjectManagerListener {
     private val eventsMap = mutableMapOf<Project, PsiTreeListener>()
-    override fun projectClosed(project: Project) {
-        super.projectClosed(project)
-    }
 
     override fun projectOpened(project: Project) {
         super.projectOpened(project)
@@ -23,9 +20,5 @@ class MyProjectManagerListener : ProjectManagerListener {
         eventsMap.remove(project)?.let {
             PsiManager.getInstance(project).removePsiTreeChangeListener(it)
         }
-    }
-
-    override fun projectClosingBeforeSave(project: Project) {
-        super.projectClosingBeforeSave(project)
     }
 }
